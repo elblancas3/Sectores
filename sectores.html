@@ -1,0 +1,3009 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
+        <link rel="stylesheet" href="css/L.Control.Locate.min.css">
+        <link rel="stylesheet" href="css/qgis2web.css">
+        <link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/leaflet-control-geocoder.Geocoder.css">
+        <link rel="stylesheet" href="css/leaflet-measure.css">
+        <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        </style>
+        <title>Análisis de Sectores</title>
+    </head>
+    <body>
+        <div id="map">
+        </div>
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/L.Control.Layers.Tree.min.js"></script>
+        <script src="js/L.Control.Locate.min.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet-control-geocoder.Geocoder.js"></script>
+        <script src="js/leaflet-measure.js"></script>
+        <script src="data/AGEBporsector_1.js"></script>
+        <script src="data/SectoresMarginacinyDensidaddePoblacin_2.js"></script>
+        <script>
+        var map = L.map('map', {
+            zoomControl:false, maxZoom:28, minZoom:1
+        }).fitBounds([[25.483496139243538,-100.7592021994805],[25.90122137867415,-99.84914878318344]]);
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        // remove popup's row if "visible-with-data"
+        function removeEmptyRowsFromPopupContent(content, feature) {
+         var tempDiv = document.createElement('div');
+         tempDiv.innerHTML = content;
+         var rows = tempDiv.querySelectorAll('tr');
+         for (var i = 0; i < rows.length; i++) {
+             var td = rows[i].querySelector('td.visible-with-data');
+             var key = td ? td.id : '';
+             if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
+                 rows[i].parentNode.removeChild(rows[i]);
+             }
+         }
+         return tempDiv.innerHTML;
+        }
+        // add class to format popup if it contains media
+		function addClassToPopupIfMedia(content, popup) {
+			var tempDiv = document.createElement('div');
+			tempDiv.innerHTML = content;
+			if (tempDiv.querySelector('td img')) {
+				popup._contentNode.classList.add('media');
+					// Delay to force the redraw
+					setTimeout(function() {
+						popup.update();
+					}, 10);
+			} else {
+				popup._contentNode.classList.remove('media');
+			}
+		}
+        var title = new L.Control({'position':'topright'});
+        title.onAdd = function (map) {
+            this._div = L.DomUtil.create('div', 'info');
+            this.update();
+            return this._div;
+        };
+        title.update = function () {
+            this._div.innerHTML = '<h2>Análisis de Sectores</h2>';
+        };
+        title.addTo(map);
+        var abstract = new L.Control({'position':'topright'});
+        abstract.onAdd = function (map) {
+            this._div = L.DomUtil.create('div',
+            'leaflet-control abstract');
+            this._div.id = 'abstract'
+
+                abstract.show();
+                return this._div;
+            };
+            abstract.show = function () {
+                this._div.classList.remove("abstract");
+                this._div.classList.add("abstractUncollapsed");
+                this._div.innerHTML = 'Distribución de marginación y densidad de población para la identificación de sectores de prioridad';
+        };
+        abstract.addTo(map);
+        var zoomControl = L.control.zoom({
+            position: 'topleft'
+        }).addTo(map);
+        L.control.locate({locateOptions: {maxZoom: 19}}).addTo(map);
+        var measureControl = new L.Control.Measure({
+            position: 'topleft',
+            primaryLengthUnit: 'meters',
+            secondaryLengthUnit: 'kilometers',
+            primaryAreaUnit: 'sqmeters',
+            secondaryAreaUnit: 'hectares'
+        });
+        measureControl.addTo(map);
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0].innerHTML = '';
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0].className += ' fas fa-ruler';
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+        }
+        map.createPane('pane_GoogleSatelite_0');
+        map.getPane('pane_GoogleSatelite_0').style.zIndex = 400;
+        var layer_GoogleSatelite_0 = L.tileLayer('http://www.google.cn/maps/vt?lyrs=s@189&gl=cn&x={x}&y={y}&z={z}', {
+            pane: 'pane_GoogleSatelite_0',
+            opacity: 1.0,
+            attribution: '',
+            minZoom: 1,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 18
+        });
+        layer_GoogleSatelite_0;
+        map.addLayer(layer_GoogleSatelite_0);
+        function pop_AGEBporsector_1(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Clave geográfica:</th>\
+                        <td class="visible-with-data" id="CVEGEO">' + (feature.properties['CVEGEO'] !== null ? autolinker.link(feature.properties['CVEGEO'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Población total:</th>\
+                        <td class="visible-with-data" id="POB1_1">' + (feature.properties['POB1_1'] !== null ? autolinker.link(feature.properties['POB1_1'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Sector:</th>\
+                        <td class="visible-with-data" id="Nombre_de">' + (feature.properties['Nombre_de'] !== null ? autolinker.link(feature.properties['Nombre_de'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Índice de marginación:</th>\
+                        <td class="visible-with-data" id="IM_2020">' + (feature.properties['IM_2020'] !== null ? autolinker.link(feature.properties['IM_2020'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Grado de marginación:</th>\
+                        <td class="visible-with-data" id="GM_2020">' + (feature.properties['GM_2020'] !== null ? autolinker.link(feature.properties['GM_2020'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Índice de marginación normalizado:</th>\
+                        <td class="visible-with-data" id="IMN_2020">' + (feature.properties['IMN_2020'] !== null ? autolinker.link(feature.properties['IMN_2020'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Área:</th>\
+                        <td class="visible-with-data" id="AREA">' + (feature.properties['AREA'] !== null ? autolinker.link(feature.properties['AREA'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Densidad de población por hectárea:</th>\
+                        <td class="visible-with-data" id="HABxHEC">' + (feature.properties['HABxHEC'] !== null ? autolinker.link(feature.properties['HABxHEC'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_AGEBporsector_1_0(feature) {
+            switch(String(feature.properties['Nombre_de'])) {
+                case 'Acueducto':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(220,85,139,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Adolfo López Mateos':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(217,96,215,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Aeropuerto - Apodaca':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(221,228,139,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Altica':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(224,15,154,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Anahuac':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(33,189,213,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Anzures':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(116,212,94,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Arboledas de San Roque':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(201,165,73,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Azteca':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(59,205,93,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Barragán - El Mirador':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(238,68,170,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Burócratas':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(56,229,26,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Callejones':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(224,33,154,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Campana - Altamira':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(89,38,216,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Casa Blanca':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(46,181,208,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Central de Abastos':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(212,104,129,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Centrika':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(240,50,145,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Centro':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(78,210,186,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Centro de Apodaca':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(98,226,132,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Centro de Guadalupe':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(238,144,169,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Centro de Santiago':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(31,142,216,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Centro Juárez':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(52,61,231,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Chapultepec':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(14,217,132,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Cieneguilla':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(123,114,222,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Ciudad Natura':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(234,171,122,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Colinas':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(107,234,166,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Colinas del Río':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(240,206,54,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Colosio':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(234,176,101,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Constituyentes de Queretaro':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(213,25,41,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Contry La Silla':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(143,225,89,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Cordillera':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(163,37,217,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Costa de la Presa':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(66,202,212,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Croc - Gloria Mendiola':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(180,52,206,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Cuauhtemoc':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(54,115,212,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Cumbres Vista Hermosa - Cumbres Norte':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(57,24,201,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Del Nogalar':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(214,39,165,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Distrito Norte - Niños Héreos':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(97,203,207,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Distrito Tec - Country':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(163,129,235,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Dos rios':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(162,222,59,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Ebanos':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(236,201,132,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Edison Industrial':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(234,216,113,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Ejido de las Escobas':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(223,122,211,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'El Barrial':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(202,238,82,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'El Cercado':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(121,134,200,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'El Cerrito':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(191,215,94,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'El Faisan':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(111,211,148,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'El Obispo':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(187,102,213,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'El Refugio':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(207,68,29,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'El Roble':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(217,178,35,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'El Uro - Los Cristales - La Bola - El Barro':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(215,185,97,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'El Yerbaniz':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(131,35,228,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Eloy Cabazos':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(122,213,80,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Ex Hacienda El Cañada':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(161,240,41,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Ex Hacienda Rosario - Sierravista':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(84,102,221,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Fraccionamiento Los Cometas':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(196,83,224,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Fraccionamiento San Francisco':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(103,57,240,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Fraccionamiento Villaluz':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(37,164,210,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Fresnos':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(214,38,138,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Fuentes de Anahuac':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(30,217,123,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Fuentes del Valle':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(204,12,70,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Fundadores-Las Torres-Las Brisas':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(226,228,88,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Hacienda del Sol':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(189,136,230,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Huajuquito':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(126,207,93,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Huinalá':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(18,15,223,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Industria':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(226,158,99,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Industrias del Vidrio':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(208,51,222,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Innovación':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(216,49,40,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Jardines de Anahuac':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(172,238,17,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Jardines de la Silla':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(224,111,36,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Jardines de Primavera':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(112,228,102,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'La Alianza':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(90,216,140,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'La Estanzuela':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(217,118,75,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'La Fama':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(235,45,20,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'La Fe':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(116,206,67,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'La Pastora':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(234,110,112,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'La Pastora / Estadio Rayados':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(42,240,75,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'La Platera':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(121,226,127,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'La Puerta':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(215,52,174,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Las Alamedas':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(200,115,196,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Las Cristalinas':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(204,129,44,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Las Palmas':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(237,99,207,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Las Puentes':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(226,15,26,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Lincoln':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(99,201,169,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Linda Vista':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(79,143,220,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Loma Larga':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(139,65,236,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Loma Larga - Independencia':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(206,115,23,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Lomas':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(81,215,78,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Lomas del Sol - El Cerrito':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(232,182,96,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Los Faines':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(140,239,127,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Los Morales':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(34,225,177,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Los Nogales':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(104,169,230,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Los Pinos':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(231,66,240,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Los Rodriguez':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(105,172,206,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Malvinas':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(125,232,216,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Margaritas':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(206,80,95,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Médico Gonzalitos - Obispado':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(77,105,214,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Metroplex':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(201,50,23,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Mezquital':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(170,220,120,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Mirador de San Antonio':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(237,146,94,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Mirasur':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(232,22,18,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Miravista':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(143,71,225,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Mision':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(221,99,223,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Moderna Churubusco':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(219,204,40,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Monte Kristal - Valle de Vaquerías':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(53,97,219,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Monterreal':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(71,147,227,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Monteverde - Valle Sur':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(70,24,240,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Nexxus':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(60,157,230,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Norte':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(111,141,212,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Nueva Linda Vista':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(240,132,108,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Ojo de Agua':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(191,96,203,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Oriente':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(198,137,233,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Otros':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(70,221,178,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Pablo Livas':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(141,130,224,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Paraíso':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(121,69,217,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Parque Industrial':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(218,87,207,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Paseo de Mina - San Martín':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(206,108,99,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Paseo de Santa Fe - Infonavit':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(106,203,227,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Pedreras':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(212,96,146,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Polígono 28':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(112,151,206,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Poniente':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(233,168,71,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Portal de Juárez':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(64,240,231,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Praderas de Guadalupe':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(213,223,134,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Praderas de Oriente':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(139,224,65,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Praderas de San Juan':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(109,214,174,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Presa de la Boca':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(151,221,60,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Puerta de Hierro - Cumbres Elite':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(85,235,105,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Raúl Salinas':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(149,63,225,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Real de Capellana':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(124,215,99,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Rosario':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(113,231,137,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'San Ángel':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(165,216,126,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'San Blas':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(113,204,122,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'San Francisco':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(188,211,124,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'San Jerónimo':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(91,212,93,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'San José':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(209,30,113,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'San Juan Bautista':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(232,71,100,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'San Miguel':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(127,221,179,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'San Pedro':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(137,201,229,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'San Pedro Sur':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(109,138,232,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'San Rafael':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(108,210,221,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'San Sebastían':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(68,61,207,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Santa Cruz':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(96,76,212,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Santa Engracia':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(220,79,100,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Santa María':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(100,233,186,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Santa Monica':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(179,209,27,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Santa Rosa':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(111,113,209,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Santa Rosalía':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(233,100,209,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Santo Domingo':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(108,216,203,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Satélite - Mederos':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(158,69,203,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Sauce':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(218,109,149,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Sendero':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(216,122,153,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Tierra y Libertad':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(109,204,104,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Topo Chico - Penitenciaria':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(239,89,169,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Torres de Guadalupe':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(126,237,228,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Tres Caminos':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(237,235,89,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'UANL':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(89,234,133,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Unidad Modelo':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(91,220,134,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Urbivilla':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(105,211,209,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Valle':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(232,213,70,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Valle Alto - El Diente':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(208,88,29,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Valle de Infonavit - Valle Verde':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(134,237,16,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Valle de Santa Lucía - Unidad Modelo':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(21,81,203,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Valle Oriente':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(73,221,23,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Valle Santa Isabel':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(191,220,134,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Valle Soleado':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(200,40,176,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Vicente Guerrero':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(25,161,202,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Villas':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(76,91,225,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Villas de Álcali':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(185,71,226,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Villas de San José':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(12,207,97,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Villas Mitra':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(157,89,203,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Vista Bella':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,229,84,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Zirandaro - Los Reyes':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(209,205,122,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Zona de Montaña':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(68,236,200,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Zona Industrial':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,90,42,0.5)',
+                interactive: true,
+            }
+                    break;
+                case 'Zona Industrial La Grange':
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(108,190,238,0.5)',
+                interactive: true,
+            }
+                    break;
+                default:
+                    return {
+                pane: 'pane_AGEBporsector_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(157,118,221,0.5)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_AGEBporsector_1');
+        map.getPane('pane_AGEBporsector_1').style.zIndex = 401;
+        map.getPane('pane_AGEBporsector_1').style['mix-blend-mode'] = 'normal';
+        var layer_AGEBporsector_1 = new L.geoJson(json_AGEBporsector_1, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_AGEBporsector_1',
+            layerName: 'layer_AGEBporsector_1',
+            pane: 'pane_AGEBporsector_1',
+            onEachFeature: pop_AGEBporsector_1,
+            style: style_AGEBporsector_1_0,
+        });
+        bounds_group.addLayer(layer_AGEBporsector_1);
+        map.addLayer(layer_AGEBporsector_1);
+        function pop_SectoresMarginacinyDensidaddePoblacin_2(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Sector:</th>\
+                        <td class="visible-with-data" id="Nombre_de">' + (feature.properties['Nombre_de'] !== null ? autolinker.link(feature.properties['Nombre_de'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Población total:</th>\
+                        <td class="visible-with-data" id="SUM_POB1_1">' + (feature.properties['SUM_POB1_1'] !== null ? autolinker.link(feature.properties['SUM_POB1_1'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Promedio del índice de marginación:</th>\
+                        <td class="visible-with-data" id="MEAN_IMN_2">' + (feature.properties['MEAN_IMN_2'] !== null ? autolinker.link(feature.properties['MEAN_IMN_2'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Densidad de población:</th>\
+                        <td class="visible-with-data" id="SUM_HABxHE">' + (feature.properties['SUM_HABxHE'] !== null ? autolinker.link(feature.properties['SUM_HABxHE'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Población total normalizada:</th>\
+                        <td class="visible-with-data" id="POB_NORMAL">' + (feature.properties['POB_NORMAL'] !== null ? autolinker.link(feature.properties['POB_NORMAL'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Densidad de población normalizada:</th>\
+                        <td class="visible-with-data" id="DEN_NORMAL">' + (feature.properties['DEN_NORMAL'] !== null ? autolinker.link(feature.properties['DEN_NORMAL'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Índice:</th>\
+                        <td class="visible-with-data" id="INDICE">' + (feature.properties['INDICE'] !== null ? autolinker.link(feature.properties['INDICE'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Categoría:</th>\
+                        <td class="visible-with-data" id="Categoria">' + (feature.properties['Categoria'] !== null ? autolinker.link(feature.properties['Categoria'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_SectoresMarginacinyDensidaddePoblacin_2_0(feature) {
+            switch(String(feature.properties['Categoria'])) {
+                case 'Muy Alto':
+                    return {
+                pane: 'pane_SectoresMarginacinyDensidaddePoblacin_2',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.7)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(202,0,32,0.7)',
+                interactive: true,
+            }
+                    break;
+                case 'Alto':
+                    return {
+                pane: 'pane_SectoresMarginacinyDensidaddePoblacin_2',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.7)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(244,165,130,0.7)',
+                interactive: true,
+            }
+                    break;
+                case 'Bajo':
+                    return {
+                pane: 'pane_SectoresMarginacinyDensidaddePoblacin_2',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.7)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(247,247,247,0.7)',
+                interactive: true,
+            }
+                    break;
+                case 'Muy Bajo':
+                    return {
+                pane: 'pane_SectoresMarginacinyDensidaddePoblacin_2',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.7)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(146,197,222,0.7)',
+                interactive: true,
+            }
+                    break;
+                case 'Medio':
+                    return {
+                pane: 'pane_SectoresMarginacinyDensidaddePoblacin_2',
+                opacity: 1,
+                color: 'rgba(35,35,35,0.7)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(5,113,176,0.7)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_SectoresMarginacinyDensidaddePoblacin_2');
+        map.getPane('pane_SectoresMarginacinyDensidaddePoblacin_2').style.zIndex = 402;
+        map.getPane('pane_SectoresMarginacinyDensidaddePoblacin_2').style['mix-blend-mode'] = 'normal';
+        var layer_SectoresMarginacinyDensidaddePoblacin_2 = new L.geoJson(json_SectoresMarginacinyDensidaddePoblacin_2, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_SectoresMarginacinyDensidaddePoblacin_2',
+            layerName: 'layer_SectoresMarginacinyDensidaddePoblacin_2',
+            pane: 'pane_SectoresMarginacinyDensidaddePoblacin_2',
+            onEachFeature: pop_SectoresMarginacinyDensidaddePoblacin_2,
+            style: style_SectoresMarginacinyDensidaddePoblacin_2_0,
+        });
+        bounds_group.addLayer(layer_SectoresMarginacinyDensidaddePoblacin_2);
+        map.addLayer(layer_SectoresMarginacinyDensidaddePoblacin_2);
+        map.on("zoomend", function(e) {
+            if (map.getZoom() <= 19 && map.getZoom() >= 13) {
+                map.addLayer(layer_AGEBporsector_1);
+            } else if (map.getZoom() > 19 || map.getZoom() < 13) {
+                map.removeLayer(layer_AGEBporsector_1);
+            }
+            if (map.getZoom() <= 13 && map.getZoom() >= 2) {
+                map.addLayer(layer_SectoresMarginacinyDensidaddePoblacin_2);
+            } else if (map.getZoom() > 13 || map.getZoom() < 2) {
+                map.removeLayer(layer_SectoresMarginacinyDensidaddePoblacin_2);
+            }
+        });
+            if (map.getZoom() <= 19 && map.getZoom() >= 13) {
+                map.addLayer(layer_AGEBporsector_1);
+            } else if (map.getZoom() > 19 || map.getZoom() < 13) {
+                map.removeLayer(layer_AGEBporsector_1);
+            }
+            if (map.getZoom() <= 13 && map.getZoom() >= 2) {
+                map.addLayer(layer_SectoresMarginacinyDensidaddePoblacin_2);
+            } else if (map.getZoom() > 13 || map.getZoom() < 2) {
+                map.removeLayer(layer_SectoresMarginacinyDensidaddePoblacin_2);
+            }
+        var osmGeocoder = new L.Control.Geocoder({
+            collapsed: true,
+            position: 'topleft',
+            text: 'Search',
+            title: 'Testing'
+        }).addTo(map);
+        document.getElementsByClassName('leaflet-control-geocoder-icon')[0]
+        .className += ' fa fa-search';
+        document.getElementsByClassName('leaflet-control-geocoder-icon')[0]
+        .title += 'Search for a place';
+        var baseMaps = {};
+        var overlaysTree = [
+            {label: 'Sectores, Marginación y Densidad de Población<br /><table><tr><td style="text-align: center;"><img src="legend/SectoresMarginacinyDensidaddePoblacin_2_MuyAlto0.png" /></td><td>Muy Alto</td></tr><tr><td style="text-align: center;"><img src="legend/SectoresMarginacinyDensidaddePoblacin_2_Alto1.png" /></td><td>Alto</td></tr><tr><td style="text-align: center;"><img src="legend/SectoresMarginacinyDensidaddePoblacin_2_Bajo2.png" /></td><td>Bajo</td></tr><tr><td style="text-align: center;"><img src="legend/SectoresMarginacinyDensidaddePoblacin_2_MuyBajo3.png" /></td><td>Muy Bajo</td></tr><tr><td style="text-align: center;"><img src="legend/SectoresMarginacinyDensidaddePoblacin_2_Medio4.png" /></td><td>Medio</td></tr></table>', layer: layer_SectoresMarginacinyDensidaddePoblacin_2},
+            {label: 'AGEB por sector<br /><table><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Acueducto0.png" /></td><td>Acueducto</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_AdolfoLópezMateos1.png" /></td><td>Adolfo López Mateos</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_AeropuertoApodaca2.png" /></td><td>Aeropuerto - Apodaca</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Altica3.png" /></td><td>Altica</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Anahuac4.png" /></td><td>Anahuac</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Anzures5.png" /></td><td>Anzures</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ArboledasdeSanRoque6.png" /></td><td>Arboledas de San Roque</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Azteca7.png" /></td><td>Azteca</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_BarragánElMirador8.png" /></td><td>Barragán - El Mirador</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Burócratas9.png" /></td><td>Burócratas</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Callejones10.png" /></td><td>Callejones</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_CampanaAltamira11.png" /></td><td>Campana - Altamira</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_CasaBlanca12.png" /></td><td>Casa Blanca</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_CentraldeAbastos13.png" /></td><td>Central de Abastos</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Centrika14.png" /></td><td>Centrika</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Centro15.png" /></td><td>Centro</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_CentrodeApodaca16.png" /></td><td>Centro de Apodaca</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_CentrodeGuadalupe17.png" /></td><td>Centro de Guadalupe</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_CentrodeSantiago18.png" /></td><td>Centro de Santiago</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_CentroJuárez19.png" /></td><td>Centro Juárez</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Chapultepec20.png" /></td><td>Chapultepec</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Cieneguilla21.png" /></td><td>Cieneguilla</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_CiudadNatura22.png" /></td><td>Ciudad Natura</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Colinas23.png" /></td><td>Colinas</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ColinasdelRío24.png" /></td><td>Colinas del Río</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Colosio25.png" /></td><td>Colosio</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ConstituyentesdeQueretaro26.png" /></td><td>Constituyentes de Queretaro</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ContryLaSilla27.png" /></td><td>Contry La Silla</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Cordillera28.png" /></td><td>Cordillera</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_CostadelaPresa29.png" /></td><td>Costa de la Presa</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_CrocGloriaMendiola30.png" /></td><td>Croc - Gloria Mendiola</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Cuauhtemoc31.png" /></td><td>Cuauhtemoc</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_CumbresVistaHermosaCumbresNorte32.png" /></td><td>Cumbres Vista Hermosa - Cumbres Norte</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_DelNogalar33.png" /></td><td>Del Nogalar</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_DistritoNorteNiñosHéreos34.png" /></td><td>Distrito Norte - Niños Héreos</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_DistritoTecCountry35.png" /></td><td>Distrito Tec - Country</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Dosrios36.png" /></td><td>Dos rios</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Ebanos37.png" /></td><td>Ebanos</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_EdisonIndustrial38.png" /></td><td>Edison Industrial</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_EjidodelasEscobas39.png" /></td><td>Ejido de las Escobas</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ElBarrial40.png" /></td><td>El Barrial</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ElCercado41.png" /></td><td>El Cercado</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ElCerrito42.png" /></td><td>El Cerrito</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ElFaisan43.png" /></td><td>El Faisan</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ElObispo44.png" /></td><td>El Obispo</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ElRefugio45.png" /></td><td>El Refugio</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ElRoble46.png" /></td><td>El Roble</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ElUroLosCristalesLaBolaElBarro47.png" /></td><td>El Uro - Los Cristales - La Bola - El Barro</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ElYerbaniz48.png" /></td><td>El Yerbaniz</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_EloyCabazos49.png" /></td><td>Eloy Cabazos</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ExHaciendaElCañada50.png" /></td><td>Ex Hacienda El Cañada</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ExHaciendaRosarioSierravista51.png" /></td><td>Ex Hacienda Rosario - Sierravista</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_FraccionamientoLosCometas52.png" /></td><td>Fraccionamiento Los Cometas</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_FraccionamientoSanFrancisco53.png" /></td><td>Fraccionamiento San Francisco</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_FraccionamientoVillaluz54.png" /></td><td>Fraccionamiento Villaluz</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Fresnos55.png" /></td><td>Fresnos</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_FuentesdeAnahuac56.png" /></td><td>Fuentes de Anahuac</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_FuentesdelValle57.png" /></td><td>Fuentes del Valle</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_FundadoresLasTorresLasBrisas58.png" /></td><td>Fundadores-Las Torres-Las Brisas</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_HaciendadelSol59.png" /></td><td>Hacienda del Sol</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Huajuquito60.png" /></td><td>Huajuquito</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Huinalá61.png" /></td><td>Huinalá</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Industria62.png" /></td><td>Industria</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_IndustriasdelVidrio63.png" /></td><td>Industrias del Vidrio</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Innovación64.png" /></td><td>Innovación</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_JardinesdeAnahuac65.png" /></td><td>Jardines de Anahuac</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_JardinesdelaSilla66.png" /></td><td>Jardines de la Silla</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_JardinesdePrimavera67.png" /></td><td>Jardines de Primavera</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LaAlianza68.png" /></td><td>La Alianza</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LaEstanzuela69.png" /></td><td>La Estanzuela</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LaFama70.png" /></td><td>La Fama</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LaFe71.png" /></td><td>La Fe</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LaPastora72.png" /></td><td>La Pastora</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LaPastoraEstadioRayados73.png" /></td><td>La Pastora / Estadio Rayados</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LaPlatera74.png" /></td><td>La Platera</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LaPuerta75.png" /></td><td>La Puerta</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LasAlamedas76.png" /></td><td>Las Alamedas</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LasCristalinas77.png" /></td><td>Las Cristalinas</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LasPalmas78.png" /></td><td>Las Palmas</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LasPuentes79.png" /></td><td>Las Puentes</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Lincoln80.png" /></td><td>Lincoln</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LindaVista81.png" /></td><td>Linda Vista</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LomaLarga82.png" /></td><td>Loma Larga</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LomaLargaIndependencia83.png" /></td><td>Loma Larga - Independencia</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Lomas84.png" /></td><td>Lomas</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LomasdelSolElCerrito85.png" /></td><td>Lomas del Sol - El Cerrito</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LosFaines86.png" /></td><td>Los Faines</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LosMorales87.png" /></td><td>Los Morales</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LosNogales88.png" /></td><td>Los Nogales</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LosPinos89.png" /></td><td>Los Pinos</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_LosRodriguez90.png" /></td><td>Los Rodriguez</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Malvinas91.png" /></td><td>Malvinas</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Margaritas92.png" /></td><td>Margaritas</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_MédicoGonzalitosObispado93.png" /></td><td>Médico Gonzalitos - Obispado</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Metroplex94.png" /></td><td>Metroplex</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Mezquital95.png" /></td><td>Mezquital</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_MiradordeSanAntonio96.png" /></td><td>Mirador de San Antonio</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Mirasur97.png" /></td><td>Mirasur</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Miravista98.png" /></td><td>Miravista</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Mision99.png" /></td><td>Mision</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ModernaChurubusco100.png" /></td><td>Moderna Churubusco</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_MonteKristalValledeVaquerías101.png" /></td><td>Monte Kristal - Valle de Vaquerías</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Monterreal102.png" /></td><td>Monterreal</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_MonteverdeValleSur103.png" /></td><td>Monteverde - Valle Sur</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Nexxus104.png" /></td><td>Nexxus</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Norte105.png" /></td><td>Norte</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_NuevaLindaVista106.png" /></td><td>Nueva Linda Vista</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_OjodeAgua107.png" /></td><td>Ojo de Agua</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Oriente108.png" /></td><td>Oriente</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Otros109.png" /></td><td>Otros</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_PabloLivas110.png" /></td><td>Pablo Livas</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Paraíso111.png" /></td><td>Paraíso</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ParqueIndustrial112.png" /></td><td>Parque Industrial</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_PaseodeMinaSanMartín113.png" /></td><td>Paseo de Mina - San Martín</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_PaseodeSantaFeInfonavit114.png" /></td><td>Paseo de Santa Fe - Infonavit</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Pedreras115.png" /></td><td>Pedreras</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Polígono28116.png" /></td><td>Polígono 28</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Poniente117.png" /></td><td>Poniente</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_PortaldeJuárez118.png" /></td><td>Portal de Juárez</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_PraderasdeGuadalupe119.png" /></td><td>Praderas de Guadalupe</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_PraderasdeOriente120.png" /></td><td>Praderas de Oriente</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_PraderasdeSanJuan121.png" /></td><td>Praderas de San Juan</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_PresadelaBoca122.png" /></td><td>Presa de la Boca</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_PuertadeHierroCumbresElite123.png" /></td><td>Puerta de Hierro - Cumbres Elite</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_RaúlSalinas124.png" /></td><td>Raúl Salinas</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_RealdeCapellana125.png" /></td><td>Real de Capellana</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Rosario126.png" /></td><td>Rosario</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_SanÁngel127.png" /></td><td>San Ángel</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_SanBlas128.png" /></td><td>San Blas</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_SanFrancisco129.png" /></td><td>San Francisco</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_SanJerónimo130.png" /></td><td>San Jerónimo</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_SanJosé131.png" /></td><td>San José</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_SanJuanBautista132.png" /></td><td>San Juan Bautista</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_SanMiguel133.png" /></td><td>San Miguel</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_SanPedro134.png" /></td><td>San Pedro</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_SanPedroSur135.png" /></td><td>San Pedro Sur</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_SanRafael136.png" /></td><td>San Rafael</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_SanSebastían137.png" /></td><td>San Sebastían</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_SantaCruz138.png" /></td><td>Santa Cruz</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_SantaEngracia139.png" /></td><td>Santa Engracia</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_SantaMaría140.png" /></td><td>Santa María</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_SantaMonica141.png" /></td><td>Santa Monica</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_SantaRosa142.png" /></td><td>Santa Rosa</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_SantaRosalía143.png" /></td><td>Santa Rosalía</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_SantoDomingo144.png" /></td><td>Santo Domingo</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_SatéliteMederos145.png" /></td><td>Satélite - Mederos</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Sauce146.png" /></td><td>Sauce</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Sendero147.png" /></td><td>Sendero</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_TierrayLibertad148.png" /></td><td>Tierra y Libertad</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_TopoChicoPenitenciaria149.png" /></td><td>Topo Chico - Penitenciaria</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_TorresdeGuadalupe150.png" /></td><td>Torres de Guadalupe</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_TresCaminos151.png" /></td><td>Tres Caminos</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_UANL152.png" /></td><td>UANL</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_UnidadModelo153.png" /></td><td>Unidad Modelo</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Urbivilla154.png" /></td><td>Urbivilla</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Valle155.png" /></td><td>Valle</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ValleAltoElDiente156.png" /></td><td>Valle Alto - El Diente</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ValledeInfonavitValleVerde157.png" /></td><td>Valle de Infonavit - Valle Verde</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ValledeSantaLucíaUnidadModelo158.png" /></td><td>Valle de Santa Lucía - Unidad Modelo</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ValleOriente159.png" /></td><td>Valle Oriente</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ValleSantaIsabel160.png" /></td><td>Valle Santa Isabel</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ValleSoleado161.png" /></td><td>Valle Soleado</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_VicenteGuerrero162.png" /></td><td>Vicente Guerrero</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_Villas163.png" /></td><td>Villas</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_VillasdeÁlcali164.png" /></td><td>Villas de Álcali</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_VillasdeSanJosé165.png" /></td><td>Villas de San José</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_VillasMitra166.png" /></td><td>Villas Mitra</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_VistaBella167.png" /></td><td>Vista Bella</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ZirandaroLosReyes168.png" /></td><td>Zirandaro - Los Reyes</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ZonadeMontaña169.png" /></td><td>Zona de Montaña</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ZonaIndustrial170.png" /></td><td>Zona Industrial</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_ZonaIndustrialLaGrange171.png" /></td><td>Zona Industrial La Grange</td></tr><tr><td style="text-align: center;"><img src="legend/AGEBporsector_1_172.png" /></td><td></td></tr></table>', layer: layer_AGEBporsector_1},
+            {label: "Google Satelite", layer: layer_GoogleSatelite_0},]
+        var lay = L.control.layers.tree(null, overlaysTree,{
+            //namedToggle: true,
+            //selectorBack: false,
+            //closedSymbol: '&#8862; &#x1f5c0;',
+            //openedSymbol: '&#8863; &#x1f5c1;',
+            //collapseAll: 'Collapse all',
+            //expandAll: 'Expand all',
+            collapsed: true,
+        });
+        lay.addTo(map);
+        map.on("zoomend", function(){
+
+                if (map.hasLayer(layer_AGEBporsector_1)) {
+                    if (map.getZoom() <= 13 && map.getZoom() >= 19) {
+                        layer_AGEBporsector_1.eachLayer(function (layer) {
+                            layer.openTooltip();
+                        });
+                    } else {
+                        layer_AGEBporsector_1.eachLayer(function (layer) {
+                            layer.closeTooltip();
+                        });
+                    }
+                }
+        });
+        setBounds();
+                if (map.hasLayer(layer_AGEBporsector_1)) {
+                    if (map.getZoom() <= 13 && map.getZoom() >= 19) {
+                        layer_AGEBporsector_1.eachLayer(function (layer) {
+                            layer.openTooltip();
+                        });
+                    } else {
+                        layer_AGEBporsector_1.eachLayer(function (layer) {
+                            layer.closeTooltip();
+                        });
+                    }
+                }
+        resetLabels([layer_AGEBporsector_1]);
+        map.on("zoomend", function(){
+            resetLabels([layer_AGEBporsector_1]);
+        });
+        map.on("layeradd", function(){
+            resetLabels([layer_AGEBporsector_1]);
+        });
+        map.on("layerremove", function(){
+            resetLabels([layer_AGEBporsector_1]);
+        });
+        </script>
+    </body>
+</html>
